@@ -98,26 +98,25 @@ impl iced::Application for Gui {
 
 async fn load_ping(ip: String) -> Result<String, ClonableIoError> {
     let output = Cmd::new("ping")
-        .arg("-c")
-        .arg("1")
+        .arg("-i")
+        .arg("0.1") // 100 milliseconds
+        .arg("-w")
+        .arg("30") // 30 seconds
         .arg(ip)
         .output()
-        .map_err(ClonableIoError::from)?;
+        .map_err(|e| ClonableIoError {
+            description: e.to_string(),
+        })?;
 
     let output_str = str::from_utf8(&output.stdout).unwrap();
-    let ping_time_line = output_str
-        .lines()
-        .find(|line| line.contains("time="))
-        .unwrap();
-    let ping_time = ping_time_line
-        .split("time=")
-        .nth(1)
-        .unwrap()
-        .split(' ')
-        .nth(0)
-        .unwrap();
 
-    Ok(ping_time.to_string())
+    if output.status.success() {
+        Ok(output_str.to_string())
+    } else {
+        Err(ClonableIoError {
+            description: output_str.to_string(),
+        })
+    }
 }
 
 fn main() -> iced::Result {
